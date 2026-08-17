@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
 import {
   CalendarDays,
   MapPin,
@@ -20,6 +21,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
 import { useWebsiteSettings } from '@/hooks/use-website-settings';
 
 const navCards = [
@@ -74,13 +76,16 @@ const navCards = [
   },
 ];
 
+type Countdown = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
 function useCountdown(target: string | null) {
-  const [remaining, setRemaining] = useState<{
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-  } | null>(null);
+  const [remaining, setRemaining] =
+    useState<Countdown | null>(null);
 
   useEffect(() => {
     if (!target) {
@@ -89,10 +94,10 @@ function useCountdown(target: string | null) {
     }
 
     const targetDate = new Date(
-      target + 'T00:00:00'
+      `${target}T00:00:00`
     ).getTime();
 
-    if (isNaN(targetDate)) {
+    if (Number.isNaN(targetDate)) {
       setRemaining(null);
       return;
     }
@@ -112,12 +117,15 @@ function useCountdown(target: string | null) {
 
       setRemaining({
         days: Math.floor(diff / 86400000),
+
         hours: Math.floor(
           (diff % 86400000) / 3600000
         ),
+
         minutes: Math.floor(
           (diff % 3600000) / 60000
         ),
+
         seconds: Math.floor(
           (diff % 60000) / 1000
         ),
@@ -126,23 +134,42 @@ function useCountdown(target: string | null) {
 
     tick();
 
-    const id = setInterval(tick, 1000);
+    const intervalId = window.setInterval(
+      tick,
+      1000
+    );
 
-    return () => clearInterval(id);
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [target]);
 
   return remaining;
 }
 
 export default function HomePage() {
-  const { settings, loading } = useWebsiteSettings();
+  const { settings, loading } =
+    useWebsiteSettings();
 
   /*
-   * Do not render the old/default website while
-   * Supabase settings are loading.
+   * IMPORTANT:
+   * This hook MUST be called on every render.
    *
-   * This prevents the old content from flashing
-   * during a page reload.
+   * Do NOT put it after:
+   *
+   * if (loading) return ...
+   *
+   * Otherwise React hook order changes and
+   * causes Minified React error #310.
+   */
+  const countdown = useCountdown(
+    settings?.event_date ?? null
+  );
+
+  /*
+   * Loading screen.
+   *
+   * This happens AFTER all hooks have been called.
    */
   if (loading || !settings) {
     return (
@@ -154,13 +181,9 @@ export default function HomePage() {
     );
   }
 
-  const countdown = useCountdown(
-    settings.event_date ?? null
-  );
-
   const eventDate = settings.event_date
     ? new Date(
-        settings.event_date + 'T00:00:00'
+        `${settings.event_date}T00:00:00`
       ).toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
@@ -222,6 +245,7 @@ export default function HomePage() {
               className="mb-6 border-accent/40 bg-accent/10 text-accent backdrop-blur-sm"
             >
               <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+
               {headline}
             </Badge>
 
@@ -252,7 +276,7 @@ export default function HomePage() {
                 <CalendarDays className="h-5 w-5 text-accent" />
 
                 <span className="text-sm font-medium sm:text-base">
-                  {eventDate ??
+                  {eventDate ||
                     'Date to be announced'}
                 </span>
               </div>
@@ -266,7 +290,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {countdown && (
+            {countdown ? (
               <div className="mt-10 grid grid-cols-4 gap-3 sm:gap-4">
                 {[
                   {
@@ -303,7 +327,7 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
-            )}
+            ) : null}
 
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button
@@ -313,6 +337,7 @@ export default function HomePage() {
               >
                 <Link href="/programs">
                   Explore Programs
+
                   <ChevronRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -355,6 +380,7 @@ export default function HomePage() {
               >
                 <Link href="/live">
                   <Radio className="mr-1.5 h-4 w-4" />
+
                   Watch Live
                 </Link>
               </Button>
@@ -381,41 +407,46 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {navCards.map((card, i) => (
-            <Link
-              key={card.href}
-              href={card.href}
-              className="group block animate-fade-up"
-              style={{
-                animationDelay: `${i * 60}ms`,
-              }}
-            >
-              <Card className="h-full overflow-hidden border-border/60 bg-white/90 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl">
-                <CardContent className="flex h-full flex-col items-start gap-3 p-5">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${card.color} text-white shadow-md transition-transform group-hover:scale-110`}
-                  >
-                    <card.icon className="h-6 w-6" />
-                  </div>
+          {navCards.map((card, i) => {
+            const Icon = card.icon;
 
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-primary">
-                      {card.label}
-                    </h3>
+            return (
+              <Link
+                key={card.href}
+                href={card.href}
+                className="group block animate-fade-up"
+                style={{
+                  animationDelay: `${i * 60}ms`,
+                }}
+              >
+                <Card className="h-full overflow-hidden border-border/60 bg-white/90 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl">
+                  <CardContent className="flex h-full flex-col items-start gap-3 p-5">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${card.color} text-white shadow-md transition-transform group-hover:scale-110`}
+                    >
+                      <Icon className="h-6 w-6" />
+                    </div>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {card.desc}
-                    </p>
-                  </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-primary">
+                        {card.label}
+                      </h3>
 
-                  <div className="mt-1 flex items-center text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                    Open
-                    <ChevronRight className="ml-0.5 h-4 w-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {card.desc}
+                      </p>
+                    </div>
+
+                    <div className="mt-1 flex items-center text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                      Open
+
+                      <ChevronRight className="ml-0.5 h-4 w-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>
