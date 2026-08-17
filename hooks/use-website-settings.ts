@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
 import { supabase, type Settings } from '@/lib/supabase';
 
-export const WEBSITE_SETTINGS_STORAGE_KEY = 'website-settings-fallback';
+export const WEBSITE_SETTINGS_STORAGE_KEY = 'website_settings-fallback';
 
 const DEFAULT_SETTINGS: Settings = {
   id: 1,
@@ -35,46 +34,6 @@ const DEFAULT_SETTINGS: Settings = {
   page_background: '#ffffff',
 };
 
-function readStoredSettings(): Settings | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(
-      WEBSITE_SETTINGS_STORAGE_KEY
-    );
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as Settings;
-
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-    } as Settings;
-  } catch {
-    return null;
-  }
-}
-
-function persistStoredSettings(settings: Settings) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(
-      WEBSITE_SETTINGS_STORAGE_KEY,
-      JSON.stringify(settings)
-    );
-  } catch {
-    // Ignore localStorage errors.
-  }
-}
-
 function hexToHsl(hex: string | null | undefined) {
   if (!hex) return null;
 
@@ -99,10 +58,9 @@ function hexToHsl(hex: string | null | undefined) {
   if (max !== min) {
     const d = max - min;
 
-    s =
-      l > 0.5
-        ? d / (2 - max - min)
-        : d / (max + min);
+    s = l > 0.5
+      ? d / (2 - max - min)
+      : d / (max + min);
 
     switch (max) {
       case r:
@@ -121,9 +79,9 @@ function hexToHsl(hex: string | null | undefined) {
     h /= 6;
   }
 
-  return `${Math.round(h * 360)} ${Math.round(
-    s * 100
-  )}% ${Math.round(l * 100)}%`;
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(
+    l * 100
+  )}%`;
 }
 
 function applyWebsiteTheme(settings: Settings) {
@@ -134,20 +92,16 @@ function applyWebsiteTheme(settings: Settings) {
   const root = document.documentElement;
 
   const primary =
-    hexToHsl(settings.primary_color) ??
-    '152 56% 22%';
+    hexToHsl(settings.primary_color) ?? '152 56% 22%';
 
   const secondary =
-    hexToHsl(settings.secondary_color) ??
-    '152 40% 92%';
+    hexToHsl(settings.secondary_color) ?? '152 40% 92%';
 
   const accent =
-    hexToHsl(settings.accent_color) ??
-    '43 74% 49%';
+    hexToHsl(settings.accent_color) ?? '43 74% 49%';
 
   const page =
-    hexToHsl(settings.page_background) ??
-    '0 0% 100%';
+    hexToHsl(settings.page_background) ?? '0 0% 100%';
 
   root.style.setProperty('--primary', primary);
   root.style.setProperty('--secondary', secondary);
@@ -180,9 +134,7 @@ function applyWebsiteTheme(settings: Settings) {
 }
 
 export function useWebsiteSettings() {
-  const [settings, setSettings] =
-    useState<Settings | null>(null);
-
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -196,53 +148,38 @@ export function useWebsiteSettings() {
           .eq('id', 1)
           .maybeSingle();
 
-        if (!error && data) {
-          const merged = {
-            ...DEFAULT_SETTINGS,
-            ...data,
-          } as Settings;
-
-          // Supabase is the primary source of truth.
-          persistStoredSettings(merged);
+        if (error) {
+          console.error(
+            'Failed to load website settings:',
+            error
+          );
 
           if (isMounted) {
-            setSettings(merged);
-            applyWebsiteTheme(merged);
+            setSettings(DEFAULT_SETTINGS);
+            applyWebsiteTheme(DEFAULT_SETTINGS);
           }
 
           return;
         }
 
-        // Supabase failed.
-        // Use localStorage only as a fallback.
-        const fallback = readStoredSettings();
+        const merged = {
+          ...DEFAULT_SETTINGS,
+          ...(data ?? {}),
+        } as Settings;
 
         if (isMounted) {
-          if (fallback) {
-            setSettings(fallback);
-            applyWebsiteTheme(fallback);
-          } else {
-            setSettings(DEFAULT_SETTINGS);
-            applyWebsiteTheme(DEFAULT_SETTINGS);
-          }
+          setSettings(merged);
+          applyWebsiteTheme(merged);
         }
       } catch (error) {
         console.error(
-          'Failed to load website settings',
+          'Failed to load website settings:',
           error
         );
 
-        // Local storage is only a fallback.
-        const fallback = readStoredSettings();
-
         if (isMounted) {
-          if (fallback) {
-            setSettings(fallback);
-            applyWebsiteTheme(fallback);
-          } else {
-            setSettings(DEFAULT_SETTINGS);
-            applyWebsiteTheme(DEFAULT_SETTINGS);
-          }
+          setSettings(DEFAULT_SETTINGS);
+          applyWebsiteTheme(DEFAULT_SETTINGS);
         }
       } finally {
         if (isMounted) {

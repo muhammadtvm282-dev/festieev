@@ -33,7 +33,7 @@ const navCards = [
   {
     href: '/live',
     label: 'Live',
-    desc: 'Watch the current live program',
+    desc: 'View the current live program',
     icon: Radio,
     color: 'from-rose-500 to-rose-700',
   },
@@ -138,15 +138,19 @@ export default function HomePage() {
   const { settings, loading } = useWebsiteSettings();
 
   /*
-   * Do not render the old/default homepage while
-   * Supabase settings are still loading.
+   * Do not render the old/default website while
+   * Supabase settings are loading.
    *
-   * This prevents the old website from flashing
-   * briefly during a page reload.
+   * This prevents the old content from flashing
+   * during a page reload.
    */
   if (loading || !settings) {
     return (
-      <div className="min-h-screen bg-background" />
+      <div
+        className="min-h-screen bg-background"
+        aria-busy="true"
+        aria-label="Loading website"
+      />
     );
   }
 
@@ -331,9 +335,10 @@ export default function HomePage() {
                       viewBox="0 0 24 24"
                       className="mr-2 inline h-4 w-4"
                       fill="currentColor"
-                      aria-hidden
+                      aria-hidden="true"
                     >
                       <path d="M20.52 3.48A11.94 11.94 0 0012.01 0C5.37 0 .08 5.29.08 11.93c0 2.1.55 4.15 1.6 5.95L0 24l6.4-1.66a11.9 11.9 0 005.6 1.42h.01c6.64 0 11.94-5.29 11.94-11.94 0-3.19-1.24-6.19-3.43-8.34zM12 21.5h-.01c-1.76 0-3.5-.46-5.02-1.33l-.36-.21-3.8.99.99-3.7-.24-.38A9.58 9.58 0 012.5 11.93c0-5.23 4.26-9.49 9.51-9.49 2.54 0 4.92.99 6.72 2.78a9.44 9.44 0 012.78 6.71c0 5.25-4.25 9.51-9.49 9.51z" />
+
                       <path d="M17.6 14.1c-.3-.1-1.77-.87-2.05-.97-.28-.1-.48-.15-.69.1-.2.24-.77.97-.95 1.17-.18.2-.35.24-.65.08-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.48-1.77-1.65-2.07-.18-.3-.02-.46.13-.61.13-.12.3-.32.45-.48.15-.16.2-.27.3-.45.1-.18.05-.34-.02-.48-.07-.13-.69-1.66-.95-2.28-.25-.59-.51-.51-.7-.51-.18 0-.39-.02-.6-.02-.2 0-.52.07-.8.36-.28.28-1.06 1.04-1.06 2.52 0 1.47 1.09 2.89 1.24 3.09.15.2 2.13 3.34 5.16 4.68 3.03 1.34 3.03.89 3.57.83.54-.06 1.76-.72 2.01-1.41.25-.69.25-1.28.18-1.41-.07-.13-.25-.2-.55-.31z" />
                     </svg>
 
