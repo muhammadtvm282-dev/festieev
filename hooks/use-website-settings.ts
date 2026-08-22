@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, type Settings } from '@/lib/supabase';
 
-export const WEBSITE_SETTINGS_STORAGE_KEY = 'website-settings-fallback';
-
 const DEFAULT_SETTINGS: Settings = {
   id: 1,
   madrasa_name: 'Darul Huda Madrasa',
@@ -33,50 +31,6 @@ const DEFAULT_SETTINGS: Settings = {
   search_background: '#f3f7f5',
   page_background: '#ffffff',
 };
-
-function readStoredSettings(): Settings | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(
-      WEBSITE_SETTINGS_STORAGE_KEY
-    );
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw);
-
-    if (!parsed || typeof parsed !== 'object') {
-      return null;
-    }
-
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-    } as Settings;
-  } catch {
-    return null;
-  }
-}
-
-function saveStoredSettings(settings: Settings) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(
-      WEBSITE_SETTINGS_STORAGE_KEY,
-      JSON.stringify(settings)
-    );
-  } catch {
-    // Ignore localStorage errors.
-  }
-}
 
 function hexToHsl(hex: string | null | undefined) {
   if (!hex) return null;
@@ -136,31 +90,40 @@ function applyWebsiteTheme(settings: Settings) {
 
   const root = document.documentElement;
 
-  const primary =
+  root.style.setProperty(
+    '--primary',
     hexToHsl(settings.primary_color) ??
-    '152 56% 22%';
+      '152 56% 22%'
+  );
 
-  const secondary =
+  root.style.setProperty(
+    '--secondary',
     hexToHsl(settings.secondary_color) ??
-    '152 40% 92%';
+      '152 40% 92%'
+  );
 
-  const accent =
+  root.style.setProperty(
+    '--accent',
     hexToHsl(settings.accent_color) ??
-    '43 74% 49%';
+      '43 74% 49%'
+  );
 
-  const page =
+  root.style.setProperty(
+    '--background',
     hexToHsl(settings.page_background) ??
-    '0 0% 100%';
+      '0 0% 100%'
+  );
 
-  root.style.setProperty('--primary', primary);
-  root.style.setProperty('--secondary', secondary);
-  root.style.setProperty('--accent', accent);
-  root.style.setProperty('--background', page);
-  root.style.setProperty('--card', page);
+  root.style.setProperty(
+    '--card',
+    hexToHsl(settings.page_background) ??
+      '0 0% 100%'
+  );
 
   root.style.setProperty(
     '--site-header-bg',
-    settings.header_background || '#ffffff'
+    settings.header_background ||
+      '#ffffff'
   );
 
   root.style.setProperty(
@@ -172,7 +135,8 @@ function applyWebsiteTheme(settings: Settings) {
 
   root.style.setProperty(
     '--site-search-bg',
-    settings.search_background || '#f3f7f5'
+    settings.search_background ||
+      '#f3f7f5'
   );
 
   document.title =
@@ -188,22 +152,20 @@ export function useWebsiteSettings() {
   const [settings, setSettings] =
     useState<Settings>(DEFAULT_SETTINGS);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      // First use browser-local data immediately.
-      const local = readStoredSettings();
-
-      if (local && !cancelled) {
-        setSettings(local);
-        applyWebsiteTheme(local);
-      }
+      setLoading(true);
 
       try {
-        const { data, error } = await supabase
+        const {
+          data,
+          error,
+        } = await supabase
           .from('settings')
           .select('*')
           .eq('id', 1)
@@ -213,22 +175,26 @@ export function useWebsiteSettings() {
           return;
         }
 
-        if (!error && data) {
+        if (error) {
+          console.error(
+            'Failed to load website settings:',
+            error
+          );
+
+          setSettings(DEFAULT_SETTINGS);
+          applyWebsiteTheme(DEFAULT_SETTINGS);
+
+          return;
+        }
+
+        if (data) {
           const remoteSettings = {
             ...DEFAULT_SETTINGS,
             ...data,
           } as Settings;
 
-          /*
-           * Public website:
-           * Supabase data is the final source of truth.
-           */
-          saveStoredSettings(remoteSettings);
           setSettings(remoteSettings);
           applyWebsiteTheme(remoteSettings);
-        } else if (local) {
-          setSettings(local);
-          applyWebsiteTheme(local);
         } else {
           setSettings(DEFAULT_SETTINGS);
           applyWebsiteTheme(DEFAULT_SETTINGS);
@@ -240,12 +206,8 @@ export function useWebsiteSettings() {
         );
 
         if (!cancelled) {
-          const fallback =
-            readStoredSettings() ??
-            DEFAULT_SETTINGS;
-
-          setSettings(fallback);
-          applyWebsiteTheme(fallback);
+          setSettings(DEFAULT_SETTINGS);
+          applyWebsiteTheme(DEFAULT_SETTINGS);
         }
       } finally {
         if (!cancelled) {
